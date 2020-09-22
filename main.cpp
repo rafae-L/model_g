@@ -36,7 +36,7 @@ int main()
 
     float a = V_x*t/n/x_0*m;
     float b = V_y*t/n/y_0*k;
-    for(int l = 0; l < n; l++)
+    for(int l = 1; l < n + 1; l++)
     {
         for(int j = 0; j < k; j++)
             for(int i = 0; i < m; i++)
@@ -46,7 +46,7 @@ int main()
 
         for(int i = 0; i < m; i++)
             for(int j = 0; j < k; j++)
-                new_m[i][j] = a*(pre_m[i+1][j] - pre_m[i][j]) + pre_m[i][j]; //сдвиг по y
+                new_m[i][j] = b*(pre_m[i][j+1] - pre_m[i][j]) + pre_m[i][j]; //сдвиг по y
 
         go_to_pre();
 
