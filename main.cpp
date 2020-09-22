@@ -29,7 +29,7 @@ void go_to_pre()
 
 int main()
 {
-    for(int i = 0; i < m + 1; i++) //заполняем для t = 0
+    for(int i = 0; i < m + 1; i++) //Р·Р°РїРѕР»РЅСЏРµРј РґР»СЏ t = 0
         for(int j = 0; j < k + 1; j++)
             pre_m[i][j] = f(i, j);
 
@@ -40,13 +40,13 @@ int main()
     {
         for(int j = 0; j < k; j++)
             for(int i = 0; i < m; i++)
-                new_m[i][j] = a*(pre_m[i+1][j] - pre_m[i][j]) + pre_m[i][j]; //сдвиг по x
+                new_m[i][j] = a*(pre_m[i+1][j] - pre_m[i][j]) + pre_m[i][j]; //СЃРґРІРёРі РїРѕ x
 
         go_to_pre();
 
         for(int i = 0; i < m; i++)
             for(int j = 0; j < k; j++)
-                new_m[i][j] = a*(pre_m[i+1][j] - pre_m[i][j]) + pre_m[i][j]; //сдвиг по y
+                new_m[i][j] = a*(pre_m[i+1][j] - pre_m[i][j]) + pre_m[i][j]; //СЃРґРІРёРі РїРѕ y
 
         go_to_pre();
 
@@ -59,7 +59,7 @@ int main()
         {
             float x_1 = x_0 * i / m;
             for(int j = 0; j < k + 1; j++)
-                out << x_1 << " " << y_0 * j / k << " " << pre_m[i][j] << endl; //вывод: x, y, z
+                out << x_1 << " " << y_0 * j / k << " " << pre_m[i][j] << endl; //РІС‹РІРѕРґ: x, y, z
         }
 
         out.close();
