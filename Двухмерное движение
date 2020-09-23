@@ -22,9 +22,26 @@ float f(int i, int j) //f(x,y)
 
 void go_to_pre()
 {
-    for(int i = 0; i < m + 1; i++)
-        for(int j = 0; j < k + 1; j++)
+    for(int i = 0; i < m; i++)
+        for(int j = 0; j < k; j++)
             pre_m[i][j] = new_m[i][j];
+}
+
+void go_to_data_in_number(int l)
+{
+    ofstream out;
+    char filename[25];
+    sprintf(filename, "Data_t/out_%d.txt", l);
+    out.open(filename);
+
+    for(int i = 0; i < m + 1; i++)
+    {
+        float x = x_0 * i / m;
+        for(int j = 0; j < k + 1; j++)
+            out << x << " " << y_0 * j / k << " " << pre_m[i][j] << endl; //вывод: x, y, z
+    }
+
+    out.close();
 }
 
 int main()
@@ -33,6 +50,7 @@ int main()
         for(int j = 0; j < k + 1; j++)
             pre_m[i][j] = f(i, j);
 
+    go_to_data_in_number(0);
 
     float a = V_x*t/n/x_0*m;
     float b = V_y*t/n/y_0*k;
@@ -50,19 +68,7 @@ int main()
 
         go_to_pre();
 
-        ofstream out;
-        char filename[25];
-        sprintf(filename, "Data_t/out_%d.txt", l);
-        out.open(filename);
-
-        for(int i = 0; i < m + 1; i++)
-        {
-            float x_1 = x_0 * i / m;
-            for(int j = 0; j < k + 1; j++)
-                out << x_1 << " " << y_0 * j / k << " " << pre_m[i][j] << endl; //вывод: x, y, z
-        }
-
-        out.close();
+        go_to_data_in_number(l);
     }
 
     return 0;
