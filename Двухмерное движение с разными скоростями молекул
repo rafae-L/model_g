@@ -10,7 +10,10 @@ float y_0 = 5; // разделено на k
 float t = 1; // разделено на n
 float f_0 = 100;
 float V_x = 1; // от -p*V_x до p*V_x
-float V_y = 1; // от -z*V_y до z*V_y
+float V_y = 1; //  от -z*V_y до z*V_y
+
+float a1 = 0.15; // в теории a1 = V_x*t/n/x_0*m
+float b1 = 0.15; // в теории b1 = V_y*t/n/y_0*k
 
 float new_m[m+1][k+1][2*p+1][2*z+1], pre_m[m+1][k+1][2*p+1][2*z+1]; //massiv[x][y][v_x][v_y]
 
@@ -25,9 +28,10 @@ void fill_start(int i, int j) //f(x,y)
 {
     float y = y_0 * i / k;
     float x = x_0 * j / m;
+    float f = exp(-((x - x_0/2)*(x - x_0/2) + (y - y_0/2)*(y - y_0/2))/2);
     for(int u = -p; u <= p; u++)
         for(int s = -z; s <= z; s++)
-            pre_m[i][j][u][s] = exp(-((x - x_0/2)*(x - x_0/2) + (y - y_0/2)*(y - y_0/2))/2);
+            pre_m[i][j][u+p][s+z] = f;
 }
 
 void go_to_pre()
@@ -36,7 +40,7 @@ void go_to_pre()
         for(int j = 0; j < k; j++)
             for(int u = -p; u <= p; u++)
                 for(int s = -z; s <= z; s++)
-                    pre_m[i][j][u][s] = new_m[i][j][u][s];
+                    pre_m[i][j][u+p][s+z] = new_m[i][j][u+p][s+z];
 }
 
 void go_to_data_in_number(int l)
@@ -51,10 +55,10 @@ void go_to_data_in_number(int l)
         float x = x_0 * i / m;
         for(int j = 0; j < k + 1; j++)
         {
-            int f = 0;
+            float f = 0;
             for(int u = -p; u <= p; u++)
                 for(int s = -z; s <= z; s++)
-                    f += pre_m[i][j][u][s];
+                    f += pre_m[i][j][u+p][s+z];
             out << x << " " << y_0 * j / k << " " << f << endl; //вывод: x, y, z
         }
     }
@@ -70,8 +74,7 @@ int main()
 
     go_to_data_in_number(0);
 
-    float a = V_x*t/n/x_0*m;
-    float b = V_y*t/n/y_0*k;
+    float a, b;
     for(int l = 1; l < n + 1; l++)
     {
         for(int j = 0; j < k + 1; j++) //сдвиг по x
@@ -79,23 +82,21 @@ int main()
                 for(int i = 1; i < m; i++) //x принимающий значения (0; x_0)
                     for(int u = -p; u <= p; u++)
                     {
-                        a = p*V_x*t/n/x_0*m;
+                        a = sign(u)*u*a1;
                         for(int s = -z; s <= z; s++)
-                            new_m[i][j][u][s] = a*(pre_m[i-sign(u)][j][u][s] - pre_m[i][j][u][s]) + pre_m[i][j][u][s];
+                            new_m[i][j][u+p][s+z] = a*(pre_m[i-sign(u)][j][u+p][s+z] - pre_m[i][j][u+p][s+z]) + pre_m[i][j][u+p][s+z];
                     }
                 for(int u = -p; u < 0; u++) //крайнее положение x = 0
                 {
-                    a = p*V_x*t/n/x_0*m;
+                    a = -u*a1;
                     for(int s = -z; s <= z; s++)
-                        new_m[0][j][u][s] = a*(pre_m[1][j][u][s] - pre_m[0][j][u][s]) + pre_m[0][j][u][s];
-
+                        new_m[0][j][u+p][s+z] = a*(pre_m[1][j][u+p][s+z] - pre_m[0][j][u+p][s+z]) + pre_m[0][j][u+p][s+z];
                 }
                 for(int u = 1; u <= p; u++) //крайнее положение x = x_0
                 {
-                    a = p*V_x*t/n/x_0*m;
+                    a = u*a1;
                     for(int s = -z; s <= z; s++)
-                        new_m[m][j][u][s] = a*(pre_m[m-1][j][u][s] - pre_m[m][j][u][s]) + pre_m[m][j][u][s];
-
+                        new_m[m][j][u+p][s+z] = a*(pre_m[m-1][j][u+p][s+z] - pre_m[m][j][u+p][s+z]) + pre_m[m][j][u+p][s+z];
                 }
             }
         go_to_pre();
@@ -106,23 +107,21 @@ int main()
                 for(int j = 1; j < k; j++) //y принимающий значения (0; y_0)
                     for(int s = -z; s <= z; s++)
                     {
-                        b = p*V_y*t/n/y_0*k;
+                        b = sign(s)*s*b1;
                         for(int u = -p; u <= p; u++)
-                            new_m[i][j][u][s] = b*(pre_m[i][j-sign(u)][u][s] - pre_m[i][j][u][s]) + pre_m[i][j][u][s];
+                            new_m[i][j][u+p][s+z] = b*(pre_m[i][j-sign(s)][u+p][s+z] - pre_m[i][j][u+p][s+z]) + pre_m[i][j][u+p][s+z];
                     }
                 for(int s = -z; s < 0; s++) //крайнее положение y = 0
                 {
-                    b = p*V_y*t/n/y_0*k;
+                    b = -s*b1;
                     for(int u = -p; u <= p; u++)
-                        new_m[i][0][u][s] = b*(pre_m[i][1][u][s] - pre_m[i][0][u][s]) + pre_m[i][0][u][s];
-
+                        new_m[i][0][u+p][s+z] = b*(pre_m[i][1][u+p][s+z] - pre_m[i][0][u+p][s+z]) + pre_m[i][0][u+p][s+z];
                 }
                 for(int s = 1; s <= z; s++) //крайнее положение y = y_0
                 {
-                    b = p*V_y*t/n/y_0*k;
+                    b = s*b1;
                     for(int u = -p; u <= p; u++)
-                        new_m[i][k][u][s] = b*(pre_m[i][k-1][u][s] - pre_m[i][k][u][s]) + pre_m[i][k][u][s];
-
+                        new_m[i][k][u+p][s+z] = b*(pre_m[i][k-1][u+p][s+z] - pre_m[i][k][u+p][s+z]) + pre_m[i][k][u+p][s+z];
                 }
             }
         go_to_pre();
