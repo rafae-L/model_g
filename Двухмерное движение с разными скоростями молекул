@@ -5,12 +5,12 @@
 using namespace std;
 
 int const m = 25, k = 25, n = 5, p = 5, z = 5;
-float x_0 = 5; // разделено на m
-float y_0 = 5; // разделено на k
-float t = 1; // разделено на n
+float x_0 = 5; // СЂР°Р·РґРµР»РµРЅРѕ РЅР° m
+float y_0 = 5; // СЂР°Р·РґРµР»РµРЅРѕ РЅР° k
+float t = 1; // СЂР°Р·РґРµР»РµРЅРѕ РЅР° n
 float f_0 = 100;
-float V_x = 1; // от -p*V_x до p*V_x
-float V_y = 1; // от -z*V_y до z*V_y
+float V_x = 1; // РѕС‚ -p*V_x РґРѕ p*V_x
+float V_y = 1; // РѕС‚ -z*V_y РґРѕ z*V_y
 
 float new_m[m+1][k+1][2*p+1][2*z+1], pre_m[m+1][k+1][2*p+1][2*z+1]; //massiv[x][y][v_x][v_y]
 
@@ -55,7 +55,7 @@ void go_to_data_in_number(int l)
             for(int u = -p; u <= p; u++)
                 for(int s = -z; s <= z; s++)
                     f += pre_m[i][j][u][s];
-            out << x << " " << y_0 * j / k << " " << f << endl; //вывод: x, y, z
+            out << x << " " << y_0 * j / k << " " << f << endl; //РІС‹РІРѕРґ: x, y, z
         }
     }
 
@@ -64,7 +64,7 @@ void go_to_data_in_number(int l)
 
 int main()
 {
-    for(int i = 0; i < m + 1; i++) //заполняем для t = 0
+    for(int i = 0; i < m + 1; i++) //Р·Р°РїРѕР»РЅСЏРµРј РґР»СЏ t = 0
         for(int j = 0; j < k + 1; j++)
             fill_start(i, j);
 
@@ -74,23 +74,23 @@ int main()
     float b = V_y*t/n/y_0*k;
     for(int l = 1; l < n + 1; l++)
     {
-        for(int j = 0; j < k + 1; j++) //сдвиг по x
+        for(int j = 0; j < k + 1; j++) //СЃРґРІРёРі РїРѕ x
             {
-                for(int i = 1; i < m; i++) //x принимающий значения (0; x_0)
+                for(int i = 1; i < m; i++) //x РїСЂРёРЅРёРјР°СЋС‰РёР№ Р·РЅР°С‡РµРЅРёСЏ (0; x_0)
                     for(int u = -p; u <= p; u++)
                     {
                         a = p*V_x*t/n/x_0*m;
                         for(int s = -z; s <= z; s++)
                             new_m[i][j][u][s] = a*(pre_m[i-sign(u)][j][u][s] - pre_m[i][j][u][s]) + pre_m[i][j][u][s];
                     }
-                for(int u = -p; u < 0; u++) //крайнее положение x = 0
+                for(int u = -p; u < 0; u++) //РєСЂР°Р№РЅРµРµ РїРѕР»РѕР¶РµРЅРёРµ x = 0
                 {
                     a = p*V_x*t/n/x_0*m;
                     for(int s = -z; s <= z; s++)
                         new_m[0][j][u][s] = a*(pre_m[1][j][u][s] - pre_m[0][j][u][s]) + pre_m[0][j][u][s];
 
                 }
-                for(int u = 1; u <= p; u++) //крайнее положение x = x_0
+                for(int u = 1; u <= p; u++) //РєСЂР°Р№РЅРµРµ РїРѕР»РѕР¶РµРЅРёРµ x = x_0
                 {
                     a = p*V_x*t/n/x_0*m;
                     for(int s = -z; s <= z; s++)
@@ -101,23 +101,23 @@ int main()
         go_to_pre();
 
 
-        for(int i = 0; i < m + 1; i++) //сдвиг по y
+        for(int i = 0; i < m + 1; i++) //СЃРґРІРёРі РїРѕ y
             {
-                for(int j = 1; j < k; j++) //y принимающий значения (0; y_0)
+                for(int j = 1; j < k; j++) //y РїСЂРёРЅРёРјР°СЋС‰РёР№ Р·РЅР°С‡РµРЅРёСЏ (0; y_0)
                     for(int s = -z; s <= z; s++)
                     {
                         b = p*V_y*t/n/y_0*k;
                         for(int u = -p; u <= p; u++)
                             new_m[i][j][u][s] = b*(pre_m[i][j-sign(u)][u][s] - pre_m[i][j][u][s]) + pre_m[i][j][u][s];
                     }
-                for(int s = -z; s < 0; s++) //крайнее положение y = 0
+                for(int s = -z; s < 0; s++) //РєСЂР°Р№РЅРµРµ РїРѕР»РѕР¶РµРЅРёРµ y = 0
                 {
                     b = p*V_y*t/n/y_0*k;
                     for(int u = -p; u <= p; u++)
                         new_m[i][0][u][s] = b*(pre_m[i][1][u][s] - pre_m[i][0][u][s]) + pre_m[i][0][u][s];
 
                 }
-                for(int s = 1; s <= z; s++) //крайнее положение y = y_0
+                for(int s = 1; s <= z; s++) //РєСЂР°Р№РЅРµРµ РїРѕР»РѕР¶РµРЅРёРµ y = y_0
                 {
                     b = p*V_y*t/n/y_0*k;
                     for(int u = -p; u <= p; u++)
