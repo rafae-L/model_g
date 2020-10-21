@@ -126,11 +126,11 @@ int main()
                 for(int u = 1; u <= p; u++) //молекулы отраженные от стенок
                     if(s*s + u*u <= p*z)
                         {
-                            a = sign(u)*u*a1;
+                            a = u*a1;
                             float r = exp(-((u*V_x)*(u*V_x) + (s*V_y)*(s*V_y)) / 2) / e_V;
 
                             new_m[0][j][u+p][s+z] = (1 - a)*pre_m[0][j][u+p][s+z] + r * f_x_0; //улетела часть + отраженные молекулы
-                            new_m[m][j][-u+p][s+z] = (1 - a)*pre_m[m][j][u+p][s+z] +  r * f_x_m;
+                            new_m[m][j][-u+p][s+z] = (1 - a)*pre_m[m][j][-u+p][s+z] +  r * f_x_m;
                         }
 
         }
@@ -171,7 +171,7 @@ int main()
                 for(int s = 1; s <= z; s++) //молекулы отраженные от стенок
                     if(s*s + u*u <= p*z)
                         {
-                            b = sign(s)*s*b1;
+                            b = s*b1;
                             float r = exp(-((u*V_x)*(u*V_x) + (s*V_y)*(s*V_y)) / 2) / e_V;
 
                             new_m[i][0][u+p][s+z] = (1 - b)*pre_m[i][0][u+p][s+z] + r * f_y_0; //улетела часть + отраженные молекулы
