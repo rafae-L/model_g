@@ -161,10 +161,9 @@ int main()
                             new_m[0][j][u+p][s+z] = pre_m[0][j][u+p][s+z] - a/2 * pre_m[1][j][u+p][s+z] + a*a/2 * (pre_m[1][j][u+p][s+z] - 2*pre_m[0][j][u+p][s+z]);
                             new_m[0][j][u+p][s+z] += out[u+p][s+z];// отраженные молекулы со скоростью u*V_x
 
-                            u = -u;
                             a = -a;// так как скорость молекул отраженых от правой стенки отрицательна
-                            new_m[m][j][u+p][s+z] = pre_m[m][j][u+p][s+z] + a/2 * pre_m[m-1][j][u+p][s+z] + a*a/2 * (-2*pre_m[m][j][u+p][s+z] + pre_m[m-1][j][u+p][s+z]);
-                            new_m[m][j][u+p][s+z] += out[u+p][s+z];
+                            new_m[m][j][-u+p][s+z] = pre_m[m][j][-u+p][s+z] + a/2 * pre_m[m-1][j][-u+p][s+z] + a*a/2 * (-2*pre_m[m][j][-u+p][s+z] + pre_m[m-1][j][-u+p][s+z]);
+                            new_m[m][j][-u+p][s+z] += out[-u+p][s+z];
                         }
 
         }
@@ -193,10 +192,9 @@ int main()
                             new_m[i][0][u+p][s+z] = pre_m[i][0][u+p][s+z] - b/2 * pre_m[i][1][u+p][s+z] + b*b/2 * (pre_m[i][1][u+p][s+z] - 2*pre_m[i][0][u+p][s+z]);
                             new_m[i][0][u+p][s+z] += out[u+p][s+z];
 
-                            s = -s;
                             b = -b;// так как скорость молекул отраженых от правой стенки отрицательна
-                            new_m[i][k][u+p][s+z] = pre_m[i][k][u+p][s+z] + b/2 * pre_m[i][k-1][u+p][s+z] + b*b/2 * (-2*pre_m[i][k][u+p][s+z] + pre_m[i][k-1][u+p][s+z]);
-                            new_m[i][k][u+p][s+z] += out[u+p][s+z];
+                            new_m[i][k][u+p][-s+z] = pre_m[i][k][u+p][-s+z] + b/2 * pre_m[i][k-1][u+p][-s+z] + b*b/2 * (-2*pre_m[i][k][u+p][-s+z] + pre_m[i][k-1][u+p][-s+z]);
+                            new_m[i][k][u+p][-s+z] += out[u+p][-s+z];
                         }
         }
         go_to_pre();
