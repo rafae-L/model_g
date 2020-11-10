@@ -15,16 +15,12 @@ float V_y = 1; // от -z*V_y до z*V_y
 float a1 = 0.05; // в теории a1 = V_x*t/n/x_0*m
 float b1 = 0.05; // в теории b1 = V_y*t/n/y_0*k
 
-
 float new_m[m+1][k+1][2*p+1][2*z+1], pre_m[m+1][k+1][2*p+1][2*z+1]; //massiv[x][y][v_x][v_y]
 
+float out[2*p+1][2*z+1];//количество молекул вылетевших со скоротью (p - i)*V_x, где i - номер элемента
 
-float out_x_0[p+1][2*z+1], out_x_m[p+1][2*z+1];//количество молекул вылетевших со скоротью по оси Ox равной по модулю i*V_x, где i - номер элемента
 float f_x_0 = 0, f_x_m = 0;// сумарное колво вылетевших молекул через правую и левую стенки
-
-float out_y_0[2*p+1][z+1], out_y_k[2*p+1][z+1];
 float f_y_0 = 0, f_y_k = 0;
-
 
 
 void fill_start(int i, int j) //f(x,y)
@@ -59,7 +55,7 @@ void sdvig_x(int i, int j, int u, int s) //сдвиг без учета отра
     {
         new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] - a/2 * pre_m[i+1][j][u+p][s+z] + a*a/2 * (pre_m[i+1][j][u+p][s+z] - 2*pre_m[i][j][u+p][s+z]);
         float outs = pre_m[i][j][u+p][s+z] - new_m[i][j][u+p][s+z]; //по сути они улетели за левую стенку
-        out_x_0[-u][s+z] = outs;
+        out[-u+p][s+z] = outs;//полетят в другую сторону по оси Ox
         f_x_0 += outs;
     }
 
@@ -67,7 +63,7 @@ void sdvig_x(int i, int j, int u, int s) //сдвиг без учета отра
     {
         new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] + a/2 * pre_m[i-1][j][u+p][s+z] + a*a/2 * (-2*pre_m[i][j][u+p][s+z] + pre_m[i-1][j][u+p][s+z]);
         float outs = pre_m[i][j][u+p][s+z] - new_m[i][j][u+p][s+z]; //по сути они улетели за правую стенку
-        out_x_m[u][s+z] = outs;
+        out[-u+p][s+z] = outs;//полетят в другую сторону по оси Ox
         f_x_m += outs;
     }
 }
@@ -83,14 +79,14 @@ void sdvig_y(int i, int j, int u, int s)
     {
         new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] - b/2 * pre_m[i][j+1][u+p][s+z] + b*b/2 * (pre_m[i][j+1][u+p][s+z] - 2*pre_m[i][j][u+p][s+z]);
         float outs = pre_m[i][j][u+p][s+z] - new_m[i][j][u+p][s+z]; //по сути они улетели за нижнюю стенку
-        out_y_0[u+p][-s] = outs;
+        out[u+p][-s+z] = outs;//полетят в другую сторону по оси Oy
         f_y_0 += outs;
     }
     else if((s >= 0) && (j == k)) //для молекул прилетающих к верхней стенке
     {
         new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] + b/2 * pre_m[i][j-1][u+p][s+z] + b*b/2 * (-2*pre_m[i][j][u+p][s+z] + pre_m[i][j-1][u+p][s+z]);
         float outs = pre_m[i][j][u+p][s+z] - new_m[i][j][u+p][s+z]; //по сути они улетели за верхнюю стенку
-        out_y_k[u+p][s] = outs;
+        out[u+p][-s+z] = outs;//полетят в другую сторону по оси Oy
         f_y_k += outs;
     }
 }
@@ -134,9 +130,6 @@ float energy()
 
 int main()
 {
-    fill_e_V_a();
-    fill_e_V_b();
-
     for(int i = 0; i <= m; i++) //заполняем для t = 0
         for(int j = 0; j <= k; j++)
             fill_start(i, j);
@@ -166,13 +159,12 @@ int main()
                             float a = u*a1;
 
                             new_m[0][j][u+p][s+z] = pre_m[0][j][u+p][s+z] - a/2 * pre_m[1][j][u+p][s+z] + a*a/2 * (pre_m[1][j][u+p][s+z] - 2*pre_m[0][j][u+p][s+z]);
-                            new_m[0][j][u+p][s+z] += out_x_0[u][s+z];// отраженные молекулы со скоростью u*V_x
+                            new_m[0][j][u+p][s+z] += out[u+p][s+z];// отраженные молекулы со скоростью u*V_x
 
                             u = -u;
                             a = -a;// так как скорость молекул отраженых от правой стенки отрицательна
                             new_m[m][j][u+p][s+z] = pre_m[m][j][u+p][s+z] + a/2 * pre_m[m-1][j][u+p][s+z] + a*a/2 * (-2*pre_m[m][j][u+p][s+z] + pre_m[m-1][j][u+p][s+z]);
-                            u = -u;// в масиве скорость по модулю
-                            new_m[m][j][u+p][s+z] += out_x_m[u][s+z];
+                            new_m[m][j][u+p][s+z] += out[u+p][s+z];
                         }
 
         }
@@ -199,13 +191,12 @@ int main()
                             float b = s*b1;
 
                             new_m[i][0][u+p][s+z] = pre_m[i][0][u+p][s+z] - b/2 * pre_m[i][1][u+p][s+z] + b*b/2 * (pre_m[i][1][u+p][s+z] - 2*pre_m[i][0][u+p][s+z]);
-                            new_m[i][0][u+p][s+z] += out_y_0[u+p][s];// отраженные молекулы со скоростью u*V_x
+                            new_m[i][0][u+p][s+z] += out[u+p][s+z];
 
                             s = -s;
                             b = -b;// так как скорость молекул отраженых от правой стенки отрицательна
                             new_m[i][k][u+p][s+z] = pre_m[i][k][u+p][s+z] + b/2 * pre_m[i][k-1][u+p][s+z] + b*b/2 * (-2*pre_m[i][k][u+p][s+z] + pre_m[i][k-1][u+p][s+z]);
-                            s = -s;// в масиве скорость по модулю
-                            new_m[i][k][u+p][s+z] += out_y_k[u+p][s];
+                            new_m[i][k][u+p][s+z] += out[u+p][s+z];
                         }
         }
         go_to_pre();
