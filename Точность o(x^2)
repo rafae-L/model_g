@@ -12,25 +12,34 @@ float f_0 = 100;
 float V_x = 1; // от -p*V_x до p*V_x
 float V_y = 1; // от -z*V_y до z*V_y
 
-float a1 = 0.05; // в теории a1 = V_x*t/n/x_0*m
+float a1 = 0.05; // в теории a1 = V_x*t/n/x_0*m = V * t0 / x0
 float b1 = 0.05; // в теории b1 = V_y*t/n/y_0*k
 
-float new_m[m+1][k+1][2*p+1][2*z+1], pre_m[m+1][k+1][2*p+1][2*z+1]; //massiv[x][y][v_x][v_y]
+float new_m[m+1][k+1][2*p+1][2*z+1], pre_m[m+1][k+1][2*p+1][2*z+1]; //massiv[x][y][v_x][v_y
 
-float out[2*p+1][2*z+1];//количество молекул вылетевших со скоротью (p - i)*V_x, где i - номер элемента
+float out[2*p+1][2*z+1]; // количество молекул вылетевших с такой скорости после отражения от стенки
 
-float f_x_0 = 0, f_x_m = 0;// сумарное колво вылетевших молекул через правую и левую стенки
-float f_y_0 = 0, f_y_k = 0;
+int sign(float a)
+{
+    if(a = 0) return 0;
+    else if(a > 0) return 1;
+    else return -1;
+}
 
+float ab_s(float a) // нужен чтобы не было отрицательных значений :)
+{
+    if(a > 0) return a;
+    else return 0;
+}
 
-void fill_start(int i, int j) //f(x,y)
+void fill_start(int i, int j) // f(x,y)
 {
     float y = y_0 * i / k;
     float x = x_0 * j / m;
     float f = 100*exp(-((x - x_0/2)*(x - x_0/2) + (y - y_0/2)*(y - y_0/2))/2);
     for(int u = -p; u <= p; u++)
         for(int s = -z; s <= z; s++)
-            if(s == 0 && u == 9)
+            if(s == 5 && u == 7)
             pre_m[i][j][u+p][s+z] = f;
         else pre_m[i][j][u+p][s+z] = 0;
 }
@@ -44,52 +53,63 @@ void go_to_pre()
                     pre_m[i][j][u+p][s+z] = new_m[i][j][u+p][s+z];
 }
 
-void sdvig_x(int i, int j, int u, int s) //сдвиг без учета отражения
+void sdvig_x(int i, int j, int u, int s) // [сдвиг без учета отражения]
 {
     float a = u*a1;
 
-    if((1 <= i) && (i <= m - 1)) //перемещает "тело" газа
-        new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] - a/2 * (pre_m[i+1][j][u+p][s+z] - pre_m[i-1][j][u+p][s+z]) + a*a/2 * (pre_m[i+1][j][u+p][s+z] - 2*pre_m[i][j][u+p][s+z] + pre_m[i-1][j][u+p][s+z]);
+//-------------------------------[перемещает "тело" газа]-----------------------------------------------------------
+    if((1 <= i) && (i <= m - 1))
+        new_m[i][j][u+p][s+z] = ab_s(a*(1+a)/2 * pre_m[i-1][j][u+p][s+z] + (1-a*a) * pre_m[i][j][u+p][s+z] - a*(1-a)/2 * pre_m[i+1][j][u+p][s+z]);
 
-    else if((u <= 0) && (i == 0)) //для молекул прилетающих к левой стенке
+//------------------------[для молекул прилетающих к левой стенке]--------------------------------------------------
+    else if((u <= 0) && (i == 0))
     {
-        new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] - a/2 * pre_m[i+1][j][u+p][s+z] + a*a/2 * (pre_m[i+1][j][u+p][s+z] - 2*pre_m[i][j][u+p][s+z]);
-        float outs = pre_m[i][j][u+p][s+z] - new_m[i][j][u+p][s+z]; //по сути они улетели за левую стенку
-        out[-u+p][s+z] = outs;//полетят в другую сторону по оси Ox
-        f_x_0 += outs;
+        // [a < 0]
+        new_m[0][j][u+p][s+z] = (1+a) * pre_m[0][j][u+p][s+z] - a * pre_m[1][j][u+p][s+z];
+
+        float outs = -a * pre_m[0][j][u+p][s+z]; // по сути они улетели за левую стенку
+        out[-u+p][s+z] = outs; // после отражения полетят в другую сторону по оси Ox
     }
 
-    else if((u >= 0) && (i == m)) //для молекул прилетающих к правой стенке
+//------------------------[для молекул прилетающих к правой стенке]-------------------------------------------------
+    else if((u >= 0) && (i == m))
     {
-        new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] + a/2 * pre_m[i-1][j][u+p][s+z] + a*a/2 * (-2*pre_m[i][j][u+p][s+z] + pre_m[i-1][j][u+p][s+z]);
-        float outs = pre_m[i][j][u+p][s+z] - new_m[i][j][u+p][s+z]; //по сути они улетели за правую стенку
-        out[-u+p][s+z] = outs;//полетят в другую сторону по оси Ox
-        f_x_m += outs;
+        new_m[m][j][u+p][s+z] = a * pre_m[m-1][j][u+p][s+z] + (1-a) * pre_m[m][j][u+p][s+z];
+
+        float outs = a * pre_m[m][j][u+p][s+z]; // по сути они улетели за правую стенку
+        out[-u+p][s+z] = outs; // полетят в другую сторону по оси Ox
     }
 }
 
-void sdvig_y(int i, int j, int u, int s)
+
+void sdvig_y(int i, int j, int u, int s) // [сдвиг без учета отражения]
 {
     float b = s*b1;
 
-    if((1 <= j) && (j <= k - 1)) //перемещает "тело" газа
-        new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] - b/2 * (pre_m[i][j+1][u+p][s+z] - pre_m[i][j-1][u+p][s+z]) + b*b/2 * (pre_m[i][j+1][u+p][s+z] - 2*pre_m[i][j][u+p][s+z] + pre_m[i][j-1][u+p][s+z]);
+//-------------------------------[перемещает "тело" газа]-----------------------------------------------------------
+    if((1 <= j) && (j <= k - 1))
+        new_m[i][j][u+p][s+z] = ab_s(b*(1+b)/2 * pre_m[i][j-1][u+p][s+z] + (1-b*b) * pre_m[i][j][u+p][s+z] - b*(1-b)/2 * pre_m[i][j+1][u+p][s+z]);
 
-    else if((s <= 0) && (j == 0)) //для молекул прилетающих к нижней стенке
+//------------------------[для молекул прилетающих к нижней стенке]-------------------------------------------------
+    else if((s <= 0) && (j == 0))
     {
-        new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] - b/2 * pre_m[i][j+1][u+p][s+z] + b*b/2 * (pre_m[i][j+1][u+p][s+z] - 2*pre_m[i][j][u+p][s+z]);
-        float outs = pre_m[i][j][u+p][s+z] - new_m[i][j][u+p][s+z]; //по сути они улетели за нижнюю стенку
-        out[u+p][-s+z] = outs;//полетят в другую сторону по оси Oy
-        f_y_0 += outs;
+        // [b < 0]
+        new_m[i][0][u+p][s+z] = (1+b) * pre_m[i][0][u+p][s+z] - b * pre_m[i][1][u+p][s+z];
+
+        float outs = -b * pre_m[i][0][u+p][s+z]; // по сути они улетели за нижнюю стенку
+        out[u+p][-s+z] = outs; // полетят в другую сторону по оси Oy
     }
-    else if((s >= 0) && (j == k)) //для молекул прилетающих к верхней стенке
+
+//------------------------[для молекул прилетающих к верхней стенке]------------------------------------------------
+    else if((s >= 0) && (j == k))
     {
-        new_m[i][j][u+p][s+z] = pre_m[i][j][u+p][s+z] + b/2 * pre_m[i][j-1][u+p][s+z] + b*b/2 * (-2*pre_m[i][j][u+p][s+z] + pre_m[i][j-1][u+p][s+z]);
-        float outs = pre_m[i][j][u+p][s+z] - new_m[i][j][u+p][s+z]; //по сути они улетели за верхнюю стенку
-        out[u+p][-s+z] = outs;//полетят в другую сторону по оси Oy
-        f_y_k += outs;
+        new_m[i][k][u+p][s+z] = b * pre_m[i][k-1][u+p][s+z] + (1-b) * pre_m[i][k][u+p][s+z];
+
+        float outs = b * pre_m[i][k][u+p][s+z]; // по сути они улетели за верхнюю стенку
+        out[u+p][-s+z] = outs; // полетят в другую сторону по оси Oy
     }
 }
+
 
 void go_to_data_in_number(int l)
 {
@@ -98,6 +118,7 @@ void go_to_data_in_number(int l)
     sprintf(filename, "Data_t/out_%d.txt", l);
     out.open(filename);
 
+    float localminimum = 0;
     for(int i = 0; i <= m; i++)
     {
         float x = x_0 * i / m;
@@ -107,30 +128,17 @@ void go_to_data_in_number(int l)
             for(int u = -p; u <= p; u++)
                 for(int s = -z; s <= z; s++)
                     f += pre_m[i][j][u+p][s+z];
-            out << x << " " << y_0 * j / k << " " << f << endl; //вывод: x, y, z
+
+            out << x << " " << y_0 * j / k << " " << f << endl; // вывод: x, y, f
         }
     }
 
     out.close();
 }
 
-float energy()
-{
-    float e = 0;
-
-    for(int i = 0; i <= m; i++)
-        for(int j = 0; j <= k; j++)
-            for(int s = -z; s <= z; s++)
-                for(int u = -p; u <= p; u++)
-                    if(s*s + u*u <= p*z)
-                        e += pre_m[i][j][u+p][s+z] * ((u*a1/t*n*x_0/m)*(u*a1/t*n*x_0/m) + (s*b1/t*n*y_0/k)*(s*b1/t*n*y_0/k));
-
-    return e;
-}
-
 int main()
 {
-    for(int i = 0; i <= m; i++) //заполняем для t = 0
+    for(int i = 0; i <= m; i++) // заполняем для t = 0
         for(int j = 0; j <= k; j++)
             fill_start(i, j);
 
@@ -139,43 +147,35 @@ int main()
 
     for(int l = 1; l <= n; l++)
     {
-        for(int j = 0; j <= k; j++) //сдвиг по x
+        for(int j = 0; j <= k; j++) // сдвиг по x
         {
-            f_x_0 = 0;
-            f_x_m = 0;
-
-
             for(int s = -z; s <= z; s++)
                 for(int u = -p; u <= p; u++)
                     for(int i = 0; i <= m; i++)
-                        if(s*s + u*u <= p*z)// проверка на то, что скорость меньше максимальной
+                        if(s*s + u*u <= p*z) // проверка на то, что скорость меньше максимальной
                             sdvig_x(i, j, u, s);
 
 
             for(int s = -z; s <= z; s++)
-                for(int u = 1; u <= p; u++) //молекулы отраженные от стенок
+                for(int u = 0; u <= p; u++) // молекулы отраженные от стенок
                     if(s*s + u*u <= p*z)
                         {
                             float a = u*a1;
 
-                            new_m[0][j][u+p][s+z] = pre_m[0][j][u+p][s+z] - a/2 * pre_m[1][j][u+p][s+z] + a*a/2 * (pre_m[1][j][u+p][s+z] - 2*pre_m[0][j][u+p][s+z]);
-                            new_m[0][j][u+p][s+z] += out[u+p][s+z];// отраженные молекулы со скоростью u*V_x
+//---------------------------------[левая стенка]-----------------------------------------------------------------------------------
+                            new_m[0][j][u+p][s+z] = (1-a) * pre_m[0][j][u+p][s+z];
+                            new_m[0][j][u+p][s+z] += out[u+p][s+z];// отраженные от правой стенки молекулы
 
-                            a = -a;// так как скорость молекул отраженых от правой стенки отрицательна
-                            new_m[m][j][-u+p][s+z] = pre_m[m][j][-u+p][s+z] + a/2 * pre_m[m-1][j][-u+p][s+z] + a*a/2 * (-2*pre_m[m][j][-u+p][s+z] + pre_m[m-1][j][-u+p][s+z]);
+//---[правая стенка][скорость молекул, отраженных от правой стенки отрицательна, поэтому берем V_x = -u]----------------------------
+                            new_m[m][j][-u+p][s+z] = (1-a) * pre_m[m][j][-u+p][s+z];
                             new_m[m][j][-u+p][s+z] += out[-u+p][s+z];
                         }
-
         }
         go_to_pre();
 
 
-        for(int i = 0; i <= m; i++) //сдвиг по y
+        for(int i = 0; i <= m; i++) // сдвиг по y
         {
-            f_y_0 = 0;
-            f_y_k = 0;
-
-
             for(int u = -p; u <= p; u++)
                 for(int s = -z; s <= z; s++)
                     for(int j = 0; j <= k; j++)
@@ -184,23 +184,23 @@ int main()
 
 
             for(int u = -p; u <= p; u++)
-                for(int s = 1; s <= z; s++) //молекулы отраженные от стенок
+                for(int s = 0; s <= z; s++) // молекулы отраженные от стенок
                     if(s*s + u*u <= p*z)
                         {
                             float b = s*b1;
 
-                            new_m[i][0][u+p][s+z] = pre_m[i][0][u+p][s+z] - b/2 * pre_m[i][1][u+p][s+z] + b*b/2 * (pre_m[i][1][u+p][s+z] - 2*pre_m[i][0][u+p][s+z]);
+//---------------------------------[нижняя стенка]----------------------------------------------------------------------------------
+                            new_m[i][0][u+p][s+z] = (1-b) * pre_m[i][0][u+p][s+z];
                             new_m[i][0][u+p][s+z] += out[u+p][s+z];
 
-                            b = -b;// так как скорость молекул отраженых от правой стенки отрицательна
-                            new_m[i][k][u+p][-s+z] = pre_m[i][k][u+p][-s+z] + b/2 * pre_m[i][k-1][u+p][-s+z] + b*b/2 * (-2*pre_m[i][k][u+p][-s+z] + pre_m[i][k-1][u+p][-s+z]);
+//---[нижняя стенка][скорость молекул, отраженных от нижней стенки отрицательна, поэтому берем V_y = -s]----------------------------
+                            new_m[i][k][u+p][-s+z] = (1-b) * pre_m[i][k][u+p][-s+z];
                             new_m[i][k][u+p][-s+z] += out[u+p][-s+z];
                         }
         }
         go_to_pre();
 
         go_to_data_in_number(l);
-        //out << energy() << endl;
     }
 
     return 0;
