@@ -1,0 +1,324 @@
+#include <fstream>
+#include <iostream>
+#include <stdio.h>
+#include <cmath>
+
+using namespace std;
+
+float minimum = 0;
+
+int const m = 50, k = 50, n = 500, p = 5, z = 5;
+float x_0 = 5; // разделено на m
+float y_0 = 5; // разделено на k
+float t = 0.1; // разделено на n
+float f_0 = 100;
+float V_x = 1; // от -p*V_x до p*V_x
+float V_y = 1; // от -z*V_y до z*V_y
+
+//-----------------------------------------------------------------------------------------------
+/*
+
+a1 = delta_Vx * (dt / dx)
+
+Так как: Vx = u * delta_Vx = u * a1 * (dx / dt) => Vx = k * u
+  k можно считать равной единичке, если у нас dt = a1*dx 
+    поэтому везде в подсчетах можно вместо Vx и Vy использовать Vx = u и Vy = s
+
+*/
+//-----------------------------------------------------------------------------------------------
+
+float a1 = 0.05; // в теории a1 = V_x*t/n/x_0*m = V * t0 / x0
+float b1 = 0.05; // в теории b1 = V_y*t/n/y_0*k
+
+long double new_m[m+1][k+1][2*p+1][2*z+1], pre_m[m+1][k+1][2*p+1][2*z+1]; //massiv[x][y][v_x][v_y]
+
+
+float sum_exp_v = 0; // сумма V_x * exp(-V^2 / 2)
+float difus_first = 0, difus_second = 0;
+
+
+int sign(float a)
+{
+    if(a = 0) return 0;
+    else if(a > 0) return 1;
+    else return -1;
+}
+
+long double ab_s(long double a)
+{
+    if(a > 0) return a;
+    else return 0;
+}
+
+void fill_sum_exp()
+{
+    for(int s = - z; s <= z; s++)
+        for(int u = 1; u <= p; u++)
+            if(u*u + s*s <= p*z)
+                sum_exp_v += u * exp(-(u*u + s*s) / 2);
+}
+
+void fill_start(int i, int j) // f(x,y)
+{
+    float y = y_0 * i / k;
+    float x = x_0 * j / m;
+    long double f = exp(-((x - x_0/2)*(x - x_0/2) + (y - y_0/2)*(y - y_0/2))/2);
+    for(int u = -p; u <= p; u++)
+        for(int s = -z; s <= z; s++)
+            if(s == 0 && u == -3)
+            pre_m[i][j][u+p][s+z] = f;
+        else pre_m[i][j][u+p][s+z] = 0.001;
+}
+
+void go_to_pre()
+{
+    for(int i = 0; i <= m; i++)
+        for(int j = 0; j <= k; j++)
+            for(int u = -p; u <= p; u++)
+                for(int s = -z; s <= z; s++)
+                    pre_m[i][j][u+p][s+z] = new_m[i][j][u+p][s+z];
+}
+
+void sdvig_x(int i, int j, int u, int s) // [сдвиг без учета отражения]
+{
+    float a = u*a1;
+
+//-------------------------------[перемещает "тело" газа]-----------------------------------------------------------
+    if((1 <= i) && (i <= m - 1))
+        new_m[i][j][u+p][s+z] = ab_s(a*(1+a)/2 * pre_m[i-1][j][u+p][s+z] + (1-a*a) * pre_m[i][j][u+p][s+z] - a*(1-a)/2 * pre_m[i+1][j][u+p][s+z]);
+        
+
+//------------------------[для молекул прилетающих к левой стенке]--------------------------------------------------
+    else if((u <= 0) && (i == 0))
+    {
+        // [a < 0]
+        new_m[0][j][u+p][s+z] = (1+a) * pre_m[0][j][u+p][s+z] - a * pre_m[1][j][u+p][s+z];
+
+        long double outs = -a * pre_m[0][j][u+p][s+z]; // по сути они улетели за левую стенку
+        difus_first += -outs * u;
+    }
+
+//------------------------[для молекул прилетающих к правой стенке]-------------------------------------------------
+    else if((u >= 0) && (i == m))
+    {
+        new_m[m][j][u+p][s+z] = a * pre_m[m-1][j][u+p][s+z] + (1-a) * pre_m[m][j][u+p][s+z];
+
+        long double outs = a * pre_m[m][j][u+p][s+z]; // по сути они улетели за правую стенку
+        difus_second += outs * u;
+    }
+}
+
+void sdvig_y(int i, int j, int u, int s) // [сдвиг без учета отражения]
+{
+    float b = s*b1;
+
+//-------------------------------[перемещает "тело" газа]-----------------------------------------------------------
+    if((1 <= j) && (j <= k - 1))
+        new_m[i][j][u+p][s+z] = ab_s(b*(1+b)/2 * pre_m[i][j-1][u+p][s+z] + (1-b*b) * pre_m[i][j][u+p][s+z] - b*(1-b)/2 * pre_m[i][j+1][u+p][s+z]);
+
+
+//------------------------[для молекул прилетающих к нижней стенке]-------------------------------------------------
+    else if((s <= 0) && (j == 0))
+    {
+        // [b < 0]
+        new_m[i][0][u+p][s+z] = (1+b) * pre_m[i][0][u+p][s+z] - b * pre_m[i][1][u+p][s+z];
+
+        long double outs = -b * pre_m[i][0][u+p][s+z]; // по сути они улетели за нижнюю стенку
+        difus_first += -outs * s;
+    }
+
+//------------------------[для молекул прилетающих к верхней стенке]------------------------------------------------
+    else if((s >= 0) && (j == k))
+    {
+        new_m[i][k][u+p][s+z] = b * pre_m[i][k-1][u+p][s+z] + (1-b) * pre_m[i][k][u+p][s+z];
+
+        long double outs = b * pre_m[i][k][u+p][s+z]; // по сути они улетели за верхнюю стенку
+        difus_second += outs * s;
+    }
+}
+
+void go_to_data_in_number(int l)
+{
+    ofstream out;
+    char filename[25];
+    sprintf(filename, "Data_t/out_%d.txt", l);
+    out.open(filename);
+
+    for(int i = 0; i <= m; i++)
+    {
+        float x = x_0 * i / m;
+        for(int j = 0; j <= k; j++)
+        {
+            long double f = 0;
+            for(int u = -p; u <= p; u++)
+                for(int s = -z; s <= z; s++)
+                    if(s*s + u*u <= p*z)
+                    f += pre_m[i][j][u+p][s+z];
+            out << x << " " << y_0 * j / k << " " << f << endl; // вывод: x, y, z
+        }
+    }
+    out.close();
+}
+
+float kolvo()
+{
+    float kolichestvo = 0;
+
+    for(int i = 0; i <= m; i++)
+        for(int j = 0; j <= k; j++)
+            for(int u = -p; u <= p; u++)
+                for(int s = -z; s <= z; s++)
+                    if(s*s + u*u <= p*z)
+                        kolichestvo += pre_m[i][j][u+p][s+z];
+
+    return kolichestvo;
+}
+
+float energ()
+{
+    float energi = 0;
+
+    for(int i = 0; i <= m; i++)
+        for(int j = 0; j <= k; j++)
+            for(int u = -p; u <= p; u++)
+                for(int s = -z; s <= z; s++)
+                    if(s*s + u*u <= p*z)
+                        energi += pre_m[i][j][u+p][s+z] * (s*s + u*u);
+
+    return energi;
+}
+
+
+int main()
+{
+    fill_sum_exp();
+
+    for(int i = 0; i <= m; i++) // заполняем для t = 0
+        for(int j = 0; j <= k; j++)
+            fill_start(i, j);
+
+    go_to_data_in_number(0);
+
+    float kolich[n+1];
+    float energi[n+1];
+
+    kolich[0] = kolvo();
+    energi[0] = energ();
+
+
+    std::cout << 0 << " " << kolich[0] << " " << energi[0] << endl;
+
+
+    for(int l = 1; l <= n; l++)
+    {
+        for(int j = 0; j <= k; j++) // сдвиг по x
+        {
+            difus_first = 0;
+            difus_second = 0;
+
+            for(int s = -z; s <= z; s++)
+                for(int u = -p; u <= p; u++)
+                    for(int i = 0; i <= m; i++)
+                        if(s*s + u*u <= p*z) // проверка на то, что скорость меньше максимальной
+                            sdvig_x(i, j, u, s);
+
+
+            float c_f = difus_first / sum_exp_v; // для правой стенки
+            float c_s = difus_second / sum_exp_v; // для левой стенки
+
+
+            for(int s = -z; s <= z; s++)
+                for(int u = 0; u <= p; u++) // молекулы отраженные от стенок
+                    if(s*s + u*u <= p*z)
+                        {
+                            float a = u*a1;
+                            long double otrazenie;
+
+//---------------------------------[левая стенка]-----------------------------------------------------------------------------------
+                            if((u != 0) && (s != 0)) otrazenie = c_f * exp(-(u*u + s*s) / 2);
+                                else otrazenie = 0;
+                            new_m[0][j][u+p][s+z] = (1-a) * pre_m[0][j][u+p][s+z] + otrazenie;// отраженные от правой стенки молекулы
+
+//---[правая стенка][скорость молекул, отраженных от правой стенки отрицательна, поэтому берем V_x = -u]----------------------------
+                            if((u != 0) && (s != 0)) otrazenie = c_s * exp(-(u*u + s*s) / 2);
+                                else otrazenie = 0;
+                            new_m[m][j][-u+p][s+z] = (1-a) * pre_m[m][j][-u+p][s+z] + otrazenie;
+                        }
+        }
+        go_to_pre();
+
+
+        for(int i = 0; i <= m; i++) // сдвиг по y
+        {
+            difus_first = 0;
+            difus_second = 0;
+
+            for(int u = -p; u <= p; u++)
+                for(int s = -z; s <= z; s++)
+                    for(int j = 0; j <= k; j++)
+                        if(s*s + u*u <= p*z)
+                            sdvig_y(i, j, u, s);
+
+
+            float c_f = difus_first / sum_exp_v; // для нижней стенки
+            float c_s = difus_second / sum_exp_v; // для верхней стенки
+
+
+            for(int u = -p; u <= p; u++)
+                for(int s = 0; s <= z; s++) // молекулы отраженные от стенок
+                    if(s*s + u*u <= p*z)
+                        {
+                            float b = s*b1;
+                            long double otrazenie;
+
+//---------------------------------[нижняя стенка]----------------------------------------------------------------------------------
+                            if((u != 0) && (s != 0)) otrazenie = c_f * exp(-(u*u + s*s) / 2);
+                                else otrazenie = 0;
+                            new_m[i][0][u+p][s+z] = (1-b) * pre_m[i][0][u+p][s+z] + otrazenie;
+
+//---[нижняя стенка][скорость молекул, отраженных от нижней стенки отрицательна, поэтому берем V_y = -s]----------------------------
+                            if((u != 0) && (s != 0)) otrazenie = c_s * exp(-(u*u + s*s) / 2);
+                                else otrazenie = 0;
+                            new_m[i][k][u+p][-s+z] = (1-b) * pre_m[i][k][u+p][-s+z] + otrazenie;
+                        }
+        }
+        go_to_pre();
+
+        if(l % 5 == 0) go_to_data_in_number(l/5);
+
+        kolich[l] = kolvo();
+        energi[l] = energ();
+
+        std::cout << l << " " << kolich[l] << " " << energi[l] << endl;
+    }
+
+//--------------------[подсчет погрешностей]-----------------------------------------------
+    float energi_0, sum_e = 0;
+    float kolvo_0, sum_k = 0;
+
+    for(int i = 0; i <= n; i++)
+    {
+        sum_e += energi[i];
+        sum_k += kolich[i];
+    }
+
+    energi_0 = sum_e / (n+1);
+    kolvo_0 = sum_k / (n+1);
+
+
+    sum_e = 0;
+    sum_k = 0;
+    for(int i = 0; i <= n; i++)
+    {
+        sum_e += (energi_0 - energi[i]) * (energi_0 - energi[i]);
+        sum_k += (kolvo_0 - kolich[i]) * (kolvo_0 - kolich[i]);
+    }
+
+    float aprox_e = sqrt(sum_e / (n+1));
+    float aprox_k = sqrt(sum_k / (n+1));
+
+    cout << "kolichestvo = (" << kolvo_0 << " +/- " << aprox_k << ")" << endl;
+    cout << "energy = (" << energi_0 << " +/- " << aprox_e << ")" << endl;
+
+    return 0;
+}
